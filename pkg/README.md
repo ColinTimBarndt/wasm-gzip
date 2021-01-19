@@ -72,3 +72,10 @@ init().then(() => {
 	console.log(reverse == text);
 });
 ```
+
+## Tests
+
+The functionality of this package was tested using the `.\tests\browser.js` test script.
+It has to be executed in the browser via the HTML file to work properly. Compression and
+decompression were tested with "normal" text data and randomized UTF-8 and binary data
+with a size of up to 183 KB. Empty input (empty Strings or Arrays) do not produce an error.
