@@ -3,8 +3,6 @@ import init, {
 	compressStringGzip,
 	decompressGzip,
 	decompressStringGzip,
-	stringToUtf8,
-	utf8ToString,
 } from "../wasm_gzip.js";
 
 Object.defineProperties(window, {
@@ -12,9 +10,10 @@ Object.defineProperties(window, {
 	compressStringGzip: { value: compressStringGzip },
 	decompressGzip: { value: decompressGzip },
 	decompressStringGzip: { value: decompressStringGzip },
-	stringToUtf8: { value: stringToUtf8 },
-	utf8ToString: { value: utf8ToString },
 });
+
+const encoder = new TextEncoder();
+const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
 // Some valid UTF-8 code points for testing.
 const UTF_DICT = [
@@ -100,7 +99,7 @@ init().then(() => {
 		i = 0;
 		while (i < 500) {
 			let data = generateText(1000 + random(1000));
-			stats.push(measure(stringToUtf8(data).length, () => testString(data)));
+			stats.push(measure(encoder.encode(data).length, () => testString(data)));
 			i += 1;
 		}
 		analyzeStats(stats, "Random Strings");
@@ -126,7 +125,7 @@ init().then(() => {
 function testString(inStr) {
 	let inBinStr, outBinCmp, outStrCmp, outBinStr, outStr;
 	try {
-		inBinStr = stringToUtf8(inStr);
+		inBinStr = encoder.encode(inStr);
 
 		// Compress
 		outBinCmp = compressGzip(inBinStr);
@@ -145,7 +144,7 @@ function testString(inStr) {
 
 		assertEqual(
 			inStr,
-			utf8ToString(outBinStr),
+			decoder.decode(outBinStr),
 			"Compare output strings from binary"
 		);
 

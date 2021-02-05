@@ -1,3 +1,4 @@
+use js_sys::JSON;
 use libflate::gzip::{Decoder, Encoder};
 use std::io::{self, Read};
 use wasm_bindgen::prelude::*;
@@ -34,15 +35,22 @@ pub fn gzip_compress_string(string: &str) -> Option<Vec<u8>> {
 
 #[wasm_bindgen(js_name = "decompressStringGzip")]
 pub fn gzip_decompress_string(data: &[u8]) -> Option<String> {
-	gzip_decompress(data).map(|decoded| bytes_to_string(&decoded))
+	gzip_decompress(data).map(|decoded| String::from_utf8_lossy(&decoded).to_string())
 }
 
-#[wasm_bindgen(js_name = "stringToUtf8")]
-pub fn string_to_bytes(input: &str) -> Vec<u8> {
-	input.as_bytes().to_vec()
+#[wasm_bindgen(js_name = "compressJsonGzip")]
+pub fn gzip_compress_json(data: &JsValue) -> Result<Vec<u8>, JsValue> {
+	match gzip_compress(String::from(JSON::stringify(data)?).as_bytes()) {
+		Some(r) => Ok(r),
+		None => return Err(JsValue::from_str("Compression failed.")),
+	}
 }
 
-#[wasm_bindgen(js_name = "utf8ToString")]
-pub fn bytes_to_string(input: &[u8]) -> String {
-	String::from_utf8_lossy(input).to_string()
+#[wasm_bindgen(js_name = "decompressJsonGzip")]
+pub fn gzip_decompress_json(data: &[u8]) -> Result<JsValue, JsValue> {
+	let text = match gzip_decompress_string(data) {
+		Some(s) => s,
+		None => return Err(JsValue::from_str("Decompression failed.")),
+	};
+	JSON::parse(&text)
 }

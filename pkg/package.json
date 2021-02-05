@@ -1,29 +1,21 @@
 {
-	"name": "wasm-gzip",
-	"version": "0.1.3",
-	"description": "Compress data on the web using Webassembly and Rust.",
-	"main": "wasm_gzip.js",
-	"directories": {
-		"test": "tests"
-	},
-	"files": [
-		"tests",
-		"README.md",
-		"wasm_gzip_bg.js",
-		"wasm_gzip_bg.wasm",
-		"wasm_gzip_bg.wasm.d.ts",
-		"wasm_gzip.d.ts",
-		"wasm_gzip.js"
-	],
-	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
-	},
-	"keywords": [
-		"wasm",
-		"gzip",
-		"compression"
-	],
-	"author": "Colin Tim Barndt",
-	"license": "Apache-2.0",
-	"repository": "github:ColinTimBarndt/wasm-gzip"
+  "name": "wasm-gzip",
+  "collaborators": [
+    "ColinTimBarndt <colin.barndt@gmail.com>"
+  ],
+  "description": "Compress and decompress data on the web using WebAssembly.",
+  "version": "1.0.1",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ColinTimBarndt/wasm-gzip"
+  },
+  "files": [
+    "wasm_gzip_bg.wasm",
+    "wasm_gzip.js",
+    "wasm_gzip.d.ts"
+  ],
+  "module": "wasm_gzip.js",
+  "types": "wasm_gzip.d.ts",
+  "sideEffects": false
 }

@@ -1,2 +1,5 @@
-/target
 *.zip
+/target
+/pkg/*
+!/pkg/tests
+!/pkg/tests/*
