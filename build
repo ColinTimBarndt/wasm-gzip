@@ -17,4 +17,4 @@ done
 
 # Build dist
 npx rollup -c
-cp LICENSE pkg/*.wasm pkg/*.wasm.map pkg/package.json dist
+cp LICENSE README.md pkg/*.wasm pkg/*.wasm.map pkg/package.json dist

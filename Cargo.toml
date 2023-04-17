@@ -1,6 +1,6 @@
 [package]
 name = "wasm-gzip"
-version = "2.0.0"
+version = "2.0.1"
 authors = ["ColinTimBarndt <colin.barndt@gmail.com>"]
 license = "Unlicense"
 repository = "https://github.com/ColinTimBarndt/wasm-gzip"
