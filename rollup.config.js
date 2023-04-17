@@ -1,7 +1,6 @@
 import {defineConfig} from "rollup";
 import terser from "@rollup/plugin-terser";
 import typescript from "@rollup/plugin-typescript";
-import dts from "rollup-plugin-dts";
 
 export default defineConfig([
     {
