@@ -51,3 +51,15 @@ const compressed = compress(10_000, data => {
 freeBuffer();
 // `compressed` is no longer safe to access from this point on
 ```
+
+## Build Requirements
+
+- [Wasm-Pack]
+- [Wasm-Snip]
+- NodeJS, I recommend [Node Version Manager]
+
+Before building, run `npm install` to install all NodeJS dependencies
+
+[Wasm-Pack]: https://rustwasm.github.io/wasm-pack/installer/
+[Wasm-Snip]: https://github.com/rustwasm/wasm-snip
+[Node Version Manager]: https://github.com/nvm-sh/nvm
