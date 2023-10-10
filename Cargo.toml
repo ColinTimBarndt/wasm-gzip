@@ -1,6 +1,6 @@
 [package]
 name = "wasm-gzip"
-version = "2.0.1"
+version = "2.0.2"
 authors = ["ColinTimBarndt <colin.barndt@gmail.com>"]
 license = "Unlicense"
 repository = "https://github.com/ColinTimBarndt/wasm-gzip"
@@ -15,7 +15,7 @@ path = "src/rs/lib.rs"
 
 [dependencies]
 wasm-bindgen = "0.2.84"
-libflate = "1.3.0"
+libflate = "2.0.0"
 wee_alloc = "0.4.5"
 js-sys = "0.3.61"
 
