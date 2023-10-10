@@ -8,6 +8,8 @@ type InitInput = RequestInfo | URL | Response | SyncInitInput;
 
 type ByteArrayInput = Uint8Array | Int8Array | Uint8ClampedArray | readonly number[];
 
+const ERROR = 0xffff_ffff;
+
 let wasm: InitOutput | null = null;
 
 let loadingWasm = false;
@@ -33,6 +35,18 @@ export default async function init(module_or_path?: InitInput | Promise<InitInpu
  */
 export function initSync(module: SyncInitInput) {
     if (!wasm) wasm = wasmInitSync(module);
+}
+
+/**
+ * Represents an error that occured while attempting to decompress
+ * gzipped data.
+ */
+export class DecompressionError extends Error {
+    name = "DecompressionError";
+    
+    constructor(message: string) {
+        super(message);
+    }
 }
 
 /**
@@ -160,7 +174,13 @@ export function decompress(dataOrLen: ByteArrayInput | number, cb?: (data: Uint8
     const ptrIn = passData(wasm, dataOrLen, cb);
     const lenOut = wasm.gzip_decompress(ptrIn, passedLength) >>> 0;
     wasm.free_u8(ptrIn, passedLength);
-    if (lenOut === 0xffff_fffff) throw new Error("Decompression error");
+    if (lenOut === ERROR) {
+        const ptrMsg = wasm.error_message();
+        const lenMsg = wasm.error_message_len();
+        const msgRaw = new Uint8Array(wasm.memory.buffer, ptrMsg, lenMsg);
+        const msg = new TextDecoder().decode(msgRaw);
+        throw new DecompressionError(msg);
+    };
     const ptrOut = wasm.buffer() >>> 0;
     return new Uint8Array(wasm.memory.buffer, ptrOut, lenOut);
 }
