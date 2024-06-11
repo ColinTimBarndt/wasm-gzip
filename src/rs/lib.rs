@@ -1,85 +1,97 @@
+mod state;
+
+use libflate::finish::AutoFinishUnchecked;
 use libflate::gzip::{Decoder, Encoder};
 use std::alloc::Layout;
 use std::io::{Read, Write};
-use std::ptr::slice_from_raw_parts;
+use std::ptr::{slice_from_raw_parts, NonNull};
 use wasm_bindgen::prelude::wasm_bindgen;
 
-static mut BUFFER: Vec<u8> = Vec::new();
-static mut ERROR_MESSAGE: String = String::new();
+use state::LocalState;
 
 const ERROR: usize = 0xffff_ffff;
 
 /// Gets the buffer address in memory
 #[wasm_bindgen]
-pub unsafe fn buffer() -> *const u8 {
-	// safety: WASM is single-threaded
-	BUFFER.as_ptr()
+pub fn buffer() -> *const u8 {
+	LocalState::with_buffer(|buf| buf.as_ptr())
 }
 
 #[wasm_bindgen]
-pub unsafe fn error_message() -> *const u8 {
-	// safety: WASM is single-threaded
-	ERROR_MESSAGE.as_ptr()
+pub fn error_message() -> *const u8 {
+	LocalState::with_error_message(|buf| buf.as_ptr())
 }
 
 #[wasm_bindgen]
-pub unsafe fn error_message_len() -> usize {
-	// safety: WASM is single-threaded
-	ERROR_MESSAGE.len()
+pub fn error_message_len() -> usize {
+	LocalState::with_error_message(|buf| buf.len())
 }
 
 #[wasm_bindgen]
-pub unsafe fn malloc_u8(size: usize) -> *mut u8 {
-	std::alloc::alloc(Layout::array::<u8>(size).unwrap())
+pub fn malloc_u8(size: usize) -> *mut u8 {
+	if size == 0 {
+		NonNull::dangling().as_ptr()
+	} else {
+		// safety: size is nonzero
+		unsafe { std::alloc::alloc(Layout::array::<u8>(size).unwrap()) }
+	}
 }
 
+/// # Safety
+/// Pointer must have been allocated with `malloc_u8` and the same size.
 #[wasm_bindgen]
 pub unsafe fn free_u8(ptr: *mut u8, size: usize) {
+	if size == 0 {
+		return;
+	}
 	std::alloc::dealloc(ptr, Layout::array::<u8>(size).unwrap());
 }
 
 /// Deallocates the buffer to free memory
 #[wasm_bindgen]
-pub unsafe fn deallocate_buffer() {
-	// safety: WASM is single-threaded
-	BUFFER = Vec::new();
-	ERROR_MESSAGE = String::new();
+pub fn deallocate_buffer() {
+	LocalState::with_buffer(|buf| *buf = Vec::new());
+	LocalState::with_error_message(|msg| *msg = String::new());
 }
 
 /// Compresses the given bytes and returns the buffer length
+///
+/// # Safety
+/// Data must point to an allocation with at least `len` bytes.
 #[wasm_bindgen]
 pub unsafe fn gzip_compress(ptr: *const u8, len: usize) -> usize {
 	let data = &*slice_from_raw_parts(ptr, len);
-	// safety: WASM is single-threaded and libflate does not call into JS
-	let buf = &mut BUFFER;
-	buf.clear();
-	let mut encoder = Encoder::new(buf).unwrap();
-	encoder.write_all(data).unwrap();
-	let res = encoder.finish().into_result().unwrap();
-	res.len()
+	return compress(data);
+
+	fn compress(data: &[u8]) -> usize {
+		LocalState::with_buffer(|buf| {
+			buf.clear();
+			let mut encoder = AutoFinishUnchecked::new(Encoder::new(&mut *buf).unwrap());
+			let _ = encoder.write_all(data);
+			drop(encoder);
+			buf.len()
+		})
+	}
 }
 
 /// Decompresses the given bytes and returns the buffer length
+///
+/// # Safety
+/// Data must point to an allocation with at least `len` bytes.
 #[wasm_bindgen]
 pub unsafe fn gzip_decompress(ptr: *const u8, len: usize) -> usize {
 	let data = &*slice_from_raw_parts(ptr, len);
-	// safety: WASM is single-threaded and libflate does not call into JS
-	let buf = &mut BUFFER;
-	buf.clear();
-	let mut decoder = match Decoder::new(data) {
-		Ok(d) => d,
-		Err(error) => {
-			// safety: same as above
-			ERROR_MESSAGE = error.to_string();
-			return ERROR;
-		}
-	};
-	match decoder.read_to_end(buf) {
-		Ok(len) => len,
-		Err(error) => {
-			// safety: same as above
-			ERROR_MESSAGE = error.to_string();
+	return decompress(data);
+
+	fn decompress(data: &[u8]) -> usize {
+		let res: Result<usize, String> = LocalState::with_buffer(|buf| {
+			buf.clear();
+			let mut decoder = Decoder::new(data).map_err(|e| e.to_string())?;
+			decoder.read_to_end(buf).map_err(|e| e.to_string())
+		});
+		res.unwrap_or_else(|err| {
+			LocalState::with_error_message(|msg| *msg = err);
 			ERROR
-		}
+		})
 	}
 }
