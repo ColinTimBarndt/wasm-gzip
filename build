@@ -3,18 +3,18 @@
 set -e
 
 # Compile WASM
-#target=wasm32-unknown-unknown
-#cargo build --target $target --release
-#test -e pkg || mkdir pkg
-#cp target/$target/release/*.wasm pkg
-#cp target/$target/release/*.wasm.map pkg
-wasm-pack build --target web
+target=wasm32-unknown-unknown
+cargo build --target $target --release
+test -e dist || mkdir dist
+cp target/$target/release/*.wasm dist
+#cp target/$target/release/*.wasm.map dist
 
 # Optimize WASM
-for file in pkg/*.wasm; do
+for file in dist/*.wasm; do
   wasm-snip --snip-rust-panicking-code --snip-rust-fmt-code -o "$file" "$file"
 done
 
 # Build dist
 npx rollup -c
-cp LICENSE README.md pkg/*.wasm pkg/*.wasm.map pkg/package.json dist
+cp LICENSE README.md dist
+cp package.release.json dist/package.json

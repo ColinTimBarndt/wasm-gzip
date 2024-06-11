@@ -4,7 +4,7 @@
 
 This small library allows compression and decompression with Gzip
 using the [libflate] Rust library.
-The binary WASM is lightweight (~103 kB WASM + ~2.8 kB JS)
+The binary WASM is lightweight (~117 kB WASM + ~2.5 kB JS)
 which may be useful for compressing network traffic or for web applications
 that let a user save or load compressed files.
 
@@ -15,7 +15,7 @@ The source code can be found on [GitHub](https://github.com/ColinTimBarndt/wasm-
 ## Examples
 
 ```ts
-import init, {compress, decompress} from "wasm-gzip";
+import init, { compress, decompress } from "wasm-gzip";
 
 await init();
 const compressed = compress("Hello, World!");
@@ -29,7 +29,7 @@ const original = new TextDecoder().decode(originalRaw);
 ```
 
 ```ts
-import init, {compress, decompress} from "wasm-gzip";
+import init, { compress, decompress } from "wasm-gzip";
 
 await init();
 await init(); // can be called multiple times
@@ -39,10 +39,10 @@ const compressed = compress([1, 2, 3, 4]);
 ```
 
 ```ts
-import init, {compress, decompress, freeBuffer} from "wasm-gzip";
+import init, { compress, decompress, freeBuffer } from "wasm-gzip";
 
 await init();
-const compressed = compress(10_000, data => {
+const compressed = compress(10_000, (data) => {
     // *zero-copy* writing into WASM-memory
     // See https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues
     crypto.getRandomValues(data);
@@ -54,9 +54,9 @@ freeBuffer();
 
 ## Build Requirements
 
-- [Wasm-Pack]
-- [Wasm-Snip]
-- NodeJS, I recommend [Node Version Manager]
+-   [Wasm-Pack]
+-   [Wasm-Snip]
+-   NodeJS, I recommend [Node Version Manager]
 
 Before building, run `npm install` to install all NodeJS dependencies
 

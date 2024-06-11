@@ -1,30 +1,17 @@
-import wasmInit, {
-    type InitOutput,
-    initSync as wasmInitSync
-} from "../../pkg/wasm_gzip.js";
-
-type SyncInitInput = BufferSource | WebAssembly.Module;
-type InitInput = RequestInfo | URL | Response | SyncInitInput;
-
-type ByteArrayInput = Uint8Array | Int8Array | Uint8ClampedArray | readonly number[];
+import * as module from "./module.js";
 
 const ERROR = 0xffff_ffff;
 
-let wasm: InitOutput | null = null;
-
-let loadingWasm = false;
+let wasm: module.WasmExports | null = null;
 
 /**
  * If `module_or_path` is {@link RequestInfo} or {@link URL}, makes a request and
  * for everything else, calls `WebAssembly.instantiate` directly.
  *
- * @param module_or_path
+ * @param init
  */
-export default async function init(module_or_path?: InitInput | Promise<InitInput> | undefined) {
-    if (loadingWasm || wasm) return;
-    loadingWasm = true;
-    const r = await wasmInit(module_or_path);
-    if (!wasm) wasm = r;
+export default async function init(init?: module.InitInput | undefined) {
+    wasm = await module.init(init);
 }
 
 /**
@@ -33,8 +20,8 @@ export default async function init(module_or_path?: InitInput | Promise<InitInpu
  *
  * @param module
  */
-export function initSync(module: SyncInitInput) {
-    if (!wasm) wasm = wasmInitSync(module);
+export function initSync(init: module.SyncInitInput) {
+    wasm = module.initSync(init);
 }
 
 /**
@@ -43,7 +30,7 @@ export function initSync(module: SyncInitInput) {
  */
 export class DecompressionError extends Error {
     name = "DecompressionError";
-    
+
     constructor(message: string) {
         super(message);
     }
@@ -54,7 +41,9 @@ export class DecompressionError extends Error {
  * @param str
  */
 function utf8size(str: string) {
-    let i = 0, cp = 0, sz = 0;
+    let i = 0,
+        cp = 0,
+        sz = 0;
     const len = str.length;
     while (i < len) {
         cp = str.codePointAt(i)!;
@@ -80,6 +69,12 @@ let passedLength: number = 0;
 let encoder: TextEncoder | null = null;
 let memory8: Uint8Array | null = null;
 
+type ByteArrayInput =
+    | Uint8Array
+    | Int8Array
+    | Uint8ClampedArray
+    | readonly number[];
+
 /**
  * Passes bytes to WASM.
  * @param wasm WASM module.
@@ -88,10 +83,11 @@ let memory8: Uint8Array | null = null;
  * @return Address of allocated data. Sets {@link passedLength}.
  */
 function passData(
-    wasm: InitOutput, dataOrLen: ByteArrayInput | string | number,
-    cb?: (data: Uint8Array) => void
-): number {
-    let ptr: number;
+    wasm: module.WasmExports,
+    dataOrLen: ByteArrayInput | string | number,
+    cb?: (data: Uint8Array) => void,
+): module.MutPointer<"u8"> {
+    let ptr: module.MutPointer<"u8">;
     if (cb) {
         const len = dataOrLen as number;
         ptr = wasm.malloc_u8(len);
@@ -106,7 +102,7 @@ function passData(
         return ptr;
     }
     if (typeof dataOrLen === "string") {
-        const len = passedLength = utf8size(dataOrLen);
+        const len = (passedLength = utf8size(dataOrLen));
         ptr = wasm.malloc_u8(len);
         const buf = new Uint8Array(wasm.memory.buffer, ptr, len);
         if (!encoder) encoder = new TextEncoder();
@@ -114,8 +110,9 @@ function passData(
         return ptr;
     }
     const buf = dataOrLen as ByteArrayInput;
-    ptr = wasm.malloc_u8(passedLength = buf.length);
-    if (!memory8 || !memory8.length) memory8 = new Uint8Array(wasm.memory.buffer);
+    ptr = wasm.malloc_u8((passedLength = buf.length));
+    if (!memory8 || !memory8.length)
+        memory8 = new Uint8Array(wasm.memory.buffer);
     memory8.set(buf, ptr);
     return ptr;
 }
@@ -139,8 +136,14 @@ export function compress(data: ByteArrayInput | string): Uint8Array;
  * @param cb Callback which initializes the data array.
  * @returns GZip compressed binary data.
  */
-export function compress(len: number, cb: (data: Uint8Array) => void): Uint8Array;
-export function compress(dataOrLen: ByteArrayInput | string | number, cb?: (data: Uint8Array) => void) {
+export function compress(
+    len: number,
+    cb: (data: Uint8Array) => void,
+): Uint8Array;
+export function compress(
+    dataOrLen: ByteArrayInput | string | number,
+    cb?: (data: Uint8Array) => void,
+) {
     checkWasm(wasm);
     const ptrIn = passData(wasm, dataOrLen, cb);
     const lenOut = wasm.gzip_compress(ptrIn, passedLength) >>> 0;
@@ -168,8 +171,14 @@ export function decompress(data: ByteArrayInput): Uint8Array;
  * @param cb Callback which initializes the data array.
  * @returns Raw binary data.
  */
-export function decompress(len: number, cb: (data: Uint8Array) => void): Uint8Array;
-export function decompress(dataOrLen: ByteArrayInput | number, cb?: (data: Uint8Array) => void) {
+export function decompress(
+    len: number,
+    cb: (data: Uint8Array) => void,
+): Uint8Array;
+export function decompress(
+    dataOrLen: ByteArrayInput | number,
+    cb?: (data: Uint8Array) => void,
+) {
     checkWasm(wasm);
     const ptrIn = passData(wasm, dataOrLen, cb);
     const lenOut = wasm.gzip_decompress(ptrIn, passedLength) >>> 0;
@@ -180,7 +189,7 @@ export function decompress(dataOrLen: ByteArrayInput | number, cb?: (data: Uint8
         const msgRaw = new Uint8Array(wasm.memory.buffer, ptrMsg, lenMsg);
         const msg = new TextDecoder().decode(msgRaw);
         throw new DecompressionError(msg);
-    };
+    }
     const ptrOut = wasm.buffer() >>> 0;
     return new Uint8Array(wasm.memory.buffer, ptrOut, lenOut);
 }
