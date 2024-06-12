@@ -117,6 +117,24 @@ function passData(
     return ptr;
 }
 
+export interface CompressionOptions {
+    noCompression?: boolean;
+    fixedHuffmanCodes?: boolean;
+}
+
+export interface DecompressionOptions {
+    multi?: boolean;
+}
+
+const OPTION_BITS = {
+    noCompression: 1,
+    fixedHuffmanCodes: 2,
+    multi: 1,
+} satisfies Record<
+    keyof CompressionOptions | keyof DecompressionOptions,
+    number
+>;
+
 /**
  * Compresses the given bytes / UTF-8 string and returns a buffer.
  *
@@ -125,7 +143,10 @@ function passData(
  * @param data Binary data or UTF-8 string.
  * @returns GZip compressed binary data.
  */
-export function compress(data: ByteArrayInput | string): Uint8Array;
+export function compress(
+    data: ByteArrayInput | string,
+    options?: CompressionOptions,
+): Uint8Array;
 /**
  * Compresses the data provided by {@link cb}. This method is the most
  * efficient as it writes directly into WASM memory without copying.
@@ -139,14 +160,22 @@ export function compress(data: ByteArrayInput | string): Uint8Array;
 export function compress(
     len: number,
     cb: (data: Uint8Array) => void,
+    options?: CompressionOptions,
 ): Uint8Array;
 export function compress(
     dataOrLen: ByteArrayInput | string | number,
-    cb?: (data: Uint8Array) => void,
+    cb: ((data: Uint8Array) => void) | CompressionOptions | undefined,
+    options: CompressionOptions = {},
 ) {
     checkWasm(wasm);
+    if (cb && !(cb instanceof Function)) {
+        options = cb;
+        cb = undefined;
+    }
+
+    const flags = makeFlags(options, OPTION_BITS);
     const ptrIn = passData(wasm, dataOrLen, cb);
-    const lenOut = wasm.gzip_compress(ptrIn, passedLength) >>> 0;
+    const lenOut = wasm.gzip_compress(ptrIn, passedLength, flags) >>> 0;
     wasm.free_u8(ptrIn, passedLength);
     const ptrOut = wasm.buffer() >>> 0;
     return new Uint8Array(wasm.memory.buffer, ptrOut, lenOut);
@@ -160,7 +189,10 @@ export function compress(
  * @param data GZip compressed binary data.
  * @returns Raw binary data.
  */
-export function decompress(data: ByteArrayInput): Uint8Array;
+export function decompress(
+    data: ByteArrayInput,
+    options?: DecompressionOptions,
+): Uint8Array;
 /**
  * Decompresses the data provided by {@link cb}. This method is the most
  * efficient as it writes directly into WASM memory without copying.
@@ -174,14 +206,23 @@ export function decompress(data: ByteArrayInput): Uint8Array;
 export function decompress(
     len: number,
     cb: (data: Uint8Array) => void,
+    options?: DecompressionOptions,
 ): Uint8Array;
 export function decompress(
     dataOrLen: ByteArrayInput | number,
-    cb?: (data: Uint8Array) => void,
+    cb: ((data: Uint8Array) => void) | DecompressionOptions | undefined,
+    options: DecompressionOptions = {},
 ) {
     checkWasm(wasm);
+    if (cb && !(cb instanceof Function)) {
+        options = cb;
+        cb = undefined;
+    }
+
+    const flags = makeFlags(options, OPTION_BITS);
+
     const ptrIn = passData(wasm, dataOrLen, cb);
-    const lenOut = wasm.gzip_decompress(ptrIn, passedLength) >>> 0;
+    const lenOut = wasm.gzip_decompress(ptrIn, passedLength, flags) >>> 0;
     wasm.free_u8(ptrIn, passedLength);
     if (lenOut === ERROR) {
         const ptrMsg = wasm.error_message();
@@ -204,4 +245,15 @@ export function freeBuffer() {
 
 function checkWasm(wasm: any): asserts wasm {
     if (!wasm) throw new Error("WASM not initialized");
+}
+
+function makeFlags<K extends string>(
+    options: Partial<Record<K, boolean>>,
+    bits: Record<K, number>,
+): number {
+    let flags = 0;
+    for (const name in options) {
+        flags |= +options[name]! * bits[name];
+    }
+    return flags;
 }

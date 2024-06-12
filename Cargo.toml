@@ -14,6 +14,7 @@ crate-type = ["cdylib"]
 path = "src/rs/lib.rs"
 
 [dependencies]
+bitflags = "2.5.0"
 libflate = "2.1.0"
 
 [profile.release]

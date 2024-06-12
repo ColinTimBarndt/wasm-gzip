@@ -19,8 +19,16 @@ export interface WasmExports {
     readonly malloc_u8: (a: number) => MutPointer<"u8">;
     readonly free_u8: (a: MutPointer<"u8">, len: number) => void;
     readonly deallocate_buffer: () => void;
-    readonly gzip_compress: (ptr: Pointer<"u8">, len: number) => number;
-    readonly gzip_decompress: (ptr: Pointer<"u8">, len: number) => number;
+    readonly gzip_compress: (
+        ptr: Pointer<"u8">,
+        len: number,
+        options: number,
+    ) => number;
+    readonly gzip_decompress: (
+        ptr: Pointer<"u8">,
+        len: number,
+        multi: number,
+    ) => number;
 }
 
 let instance: WasmExports | Promise<WasmExports> | null = null;

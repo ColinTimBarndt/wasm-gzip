@@ -52,6 +52,23 @@ freeBuffer();
 // `compressed` is no longer safe to access from this point on
 ```
 
+```ts
+import init, { compress, decompress } from "wasm-gzip";
+
+await init();
+
+// A very inefficient way to add strings
+const compressed = new Uint8Array(
+    (function* () {
+        yield* compress("Hello, ");
+        yield* compress("World!");
+    })(),
+);
+const combinedRaw = decompress(compressed, { multi: true });
+const combined = new TextDecoder().decode(combinedRaw);
+// "Hello, World!"
+```
+
 ## Build Requirements
 
 -   [Wasm-Pack]
