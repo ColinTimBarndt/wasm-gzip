@@ -4,9 +4,10 @@
 
 This small library allows compression and decompression with Gzip
 using the [libflate] Rust library.
-The binary WASM is lightweight (~117 kB WASM + ~2.5 kB JS)
+The binary WASM is lightweight (~121 kB WASM + ~2.8 kB JS)
 which may be useful for compressing network traffic or for web applications
-that let a user save or load compressed files.
+that let a user save or load compressed files. Also note that web servers can transfer
+compressed files, which can half the size of the WASM file.
 
 The source code can be found on [GitHub](https://github.com/ColinTimBarndt/wasm-gzip).
 

@@ -4,7 +4,7 @@
     "Colin Tim Barndt <contact@colintimbarndt.de>"
   ],
   "description": "Compress and decompress data on the web using WebAssembly.",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "license": "Unlicense",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
   "files": [
     "wasm_gzip.wasm",
     "wasm_gzip.js",
-    "wasm_gzip.d.ts"
+    "*.d.ts"
   ],
   "module": "wasm_gzip.js",
   "types": "wasm_gzip.d.ts",

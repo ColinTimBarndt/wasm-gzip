@@ -118,11 +118,20 @@ function passData(
 }
 
 export interface CompressionOptions {
+    /**
+     * Disables LZ77 compression.
+     */
     noCompression?: boolean;
+    /**
+     * Specifies to compress with fixed huffman codes.
+     */
     fixedHuffmanCodes?: boolean;
 }
 
 export interface DecompressionOptions {
+    /**
+     * A decoder that decodes all members in a GZIP data array.
+     */
     multi?: boolean;
 }
 
